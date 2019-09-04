@@ -284,9 +284,11 @@ def loop_for(x, client, fn):
             elif state == State.PENDING:
                 log.debug(f"In progress. Checking again in {retry_int}s...")
                 time.sleep(retry_int)
+                client = login_loop_for(remaining_time, client.args)
             else:
                 log.debug(f"Action failed. Trying again in {retry_int}s...")
                 time.sleep(retry_int)
+                client = login_loop_for(remaining_time, client.args)
         except KeyboardInterrupt:
             exit(0)
         except Timeout:
