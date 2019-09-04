@@ -1,0 +1,32 @@
+# Auth credentials
+ip:
+usr: admin
+pwd:
+
+# file for pre/post check snapshot
+snapshot_file: snapshot.json
+
+# print debug output
+debug: False
+
+# interval in seconds between retrying failed check
+retry_interval: 10
+
+# interval in seconds between login attempts
+login_interval: 60
+
+# backup job to trigger prior to upgrade
+backup_job: DailyAutoBackup
+
+# tech support export policy name
+tech_support: Pre-Upgrade
+
+# Firmware versions
+apic_version: 3.2(4d)
+switch_version: 13.2(4d)
+
+# List of firmware groups. Will be triggered in order listed
+firmware_groups:
+  - Maint-Even-Nodes
+  - Maint-Odd-Nodes
+

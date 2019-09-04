@@ -1,0 +1,7 @@
+{
+  "binary": "/Users/nathan/.pyenv/versions/3.7.3/bin/pyre.bin",
+  "source_directories": [
+    "."
+  ],
+  "typeshed": "/Users/nathan/.pyenv/versions/3.7.3/lib/pyre_check/typeshed/"
+}
