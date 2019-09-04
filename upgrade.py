@@ -286,8 +286,8 @@ def run(client=None, timeout=600) -> State:
         if client is None:
             return State.FAIL
     try:
-        # panic_gate(lambda: backup(client, timeout), "backup")
-        # panic_gate(lambda: tech_support(client, timeout), "tech support")
+        panic_gate(lambda: backup(client, timeout), "backup")
+        panic_gate(lambda: tech_support(client, timeout), "tech support")
         panic_gate(lambda: upgrade_apics(client, timeout), "APIC upgrade")
         for group in client.args["firmware_groups"]:
             panic_gate(
