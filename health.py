@@ -255,11 +255,11 @@ def check_backup(client: Client) -> State:
     latest_backup = None
     for backup in client.get_class("configJob"):
         iso_backup_str = backup["executeTime"][:19]
-        backup_time = datetime.strptime(iso_backup_str, "%Y-%m-%dT%H:%M:%S")
-        if latest_backup is None or backup_time > latest_backup:
-            latest_backup = backup_time
+        this_backup_time = datetime.strptime(iso_backup_str, "%Y-%m-%dT%H:%M:%S")
+        if latest_backup is None or this_backup_time > latest_backup:
+            latest_backup = this_backup_time
         last_24hrs = datetime.now() - timedelta(hours=24)
-        if backup_time >= last_24hrs and backup["operSt"] == "success":
+        if this_backup_time >= last_24hrs and backup["operSt"] == "success":
             recent_backup = True
     latest = "None" if latest_backup is None else latest_backup.isoformat()
     if not recent_backup:
