@@ -1,15 +1,15 @@
 from datetime import datetime
 from typing import Dict, List
 from util import (
+    Client,
+    GatingEvent,
+    State,
+    config,
+    get_path,
     log,
     login_loop_for,
     loop_for,
-    config,
-    get_path,
     panic_gate,
-    GatingEvent,
-    State,
-    Client,
 )
 
 
@@ -116,6 +116,12 @@ class MaintGroup(object):
     def is_already_upgraded(self, client: Client) -> bool:
         """Is this group already running the target code?"""
         for job in get_maint_job(client, self.group):
+            log.debug(
+                "Code status",
+                curren_version=job.get("desiredVersion"),
+                target_version=self.version_str,
+                group=self.group,
+            )
             is_target_ver = job.get("desiredVersion") == self.version_str
             is_done = job.get("upgradeStatus") == "completeok"
             if not is_target_ver or (is_target_ver and not is_done):
