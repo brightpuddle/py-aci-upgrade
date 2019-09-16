@@ -313,7 +313,12 @@ def run(client=None, timeout=3600) -> State:
         client = login_loop_for(timeout, config)
         if client is None:
             return State.FAIL
-    state = loop_for(timeout, client, run_checks)
+    state = loop_for(
+        timeout,
+        client,
+        run_checks,
+        fail_msg="Health check unsuccessful. Trying again in {}s...",
+    )
     if state == State.OK:
         log.info("Health check successful.")
     elif state == State.FAIL:

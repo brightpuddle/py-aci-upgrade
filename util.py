@@ -266,7 +266,13 @@ def login_loop_for(x: int, config) -> Union[Client, None]:
             time.sleep(login_int)
 
 
-def loop_for(x, client, fn):
+def loop_for(
+    x,
+    client,
+    fn,
+    wait_msg="In progress. Checking again in {}s...",
+    fail_msg="Action failed. Trying again in {}s...",
+):
     """Loop function fn for x seconds, reattempting login
     Returns on success or timeout
     """
@@ -282,11 +288,11 @@ def loop_for(x, client, fn):
             if state == State.OK:
                 return state
             elif state == State.PENDING:
-                log.debug(f"In progress. Checking again in {retry_int}s...")
+                log.debug(wait_msg.format(retry_int))
                 time.sleep(retry_int)
                 client = login_loop_for(remaining_time, client.args)
             else:
-                log.debug(f"Action failed. Trying again in {retry_int}s...")
+                log.info(fail_msg.format(retry_int))
                 time.sleep(retry_int)
                 client = login_loop_for(remaining_time, client.args)
         except KeyboardInterrupt:
