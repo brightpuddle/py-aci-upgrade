@@ -115,7 +115,10 @@ class MaintGroup(object):
 
     def is_already_upgraded(self, client: Client) -> bool:
         """Is this group already running the target code?"""
-        for job in get_maint_job(client, self.group):
+        jobs = get_maint_job(client, self.group)
+        if len(jobs) == 0:
+            return False
+        for job in jobs:
             log.debug(
                 "Code status",
                 current_version=job.get("desiredVersion"),
