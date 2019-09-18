@@ -308,10 +308,9 @@ def run(timeout=600) -> State:
         panic_gate(lambda: backup(timeout), "backup")
         panic_gate(lambda: tech_support(timeout), "tech support")
         panic_gate(lambda: upgrade_apics(timeout), "APIC upgrade")
-        for group in client.args["firmware_groups"]:
+        for group in config["firmware_groups"]:
             panic_gate(
-                lambda: upgrade_switches(group, timeout),
-                f"{group} switch upgrade",
+                lambda: upgrade_switches(group, timeout), f"{group} switch upgrade"
             )
     except GatingEvent as e:
         log.error(f"Failed upgrade on {e}.")
