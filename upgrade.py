@@ -13,8 +13,12 @@ from util import (
 )
 
 
-def backup(client: Client, timeout=600) -> State:
+def backup(timeout=600) -> State:
     """Run backup job"""
+    client = login_loop_for(timeout, config)
+    if client is None:
+        return State.FAIL
+
     log.info("Triggering configuration backup...")
     backup_job = client.args["backup_job"]
     backup_dn = f"uni/fabric/configexp-{backup_job}"
@@ -54,8 +58,12 @@ def backup(client: Client, timeout=600) -> State:
     return state
 
 
-def tech_support(client: Client, timeout=600) -> State:
+def tech_support(timeout=600) -> State:
     """Collect tech support from APICs"""
+    client = login_loop_for(timeout, config)
+    if client is None:
+        return State.FAIL
+
     log.info("Collecting tech-support from APICs...")
     job_name = client.args["tech_support"]
     job_dn = f"uni/fabric/tsexp-{job_name}"
@@ -172,8 +180,11 @@ class MaintGroup(object):
         return state
 
 
-def upgrade_apics(client: Client, timeout=600) -> State:
+def upgrade_apics(timeout=600) -> State:
     """Upgrade controllers."""
+    client = login_loop_for(timeout, config)
+    if client is None:
+        return State.FAIL
 
     version = client.args["apic_version"]
 
@@ -250,8 +261,11 @@ def upgrade_apics(client: Client, timeout=600) -> State:
     return state
 
 
-def upgrade_switches(fw_group: str, client: Client, timeout=600) -> State:
+def upgrade_switches(fw_group: str, timeout=600) -> State:
     """Upgrade maintenance group."""
+    client = login_loop_for(timeout, config)
+    if client is None:
+        return State.FAIL
 
     version = client.args["switch_version"]
     group = MaintGroup(client, group=fw_group, version_str=f"n9000-{version}")
@@ -288,19 +302,15 @@ def upgrade_switches(fw_group: str, client: Client, timeout=600) -> State:
     return state
 
 
-def run(client=None, timeout=600) -> State:
+def run(timeout=600) -> State:
     """Initial entry point."""
-    if client is None:
-        client = login_loop_for(timeout, config)
-        if client is None:
-            return State.FAIL
     try:
-        panic_gate(lambda: backup(client, timeout), "backup")
-        panic_gate(lambda: tech_support(client, timeout), "tech support")
-        panic_gate(lambda: upgrade_apics(client, timeout), "APIC upgrade")
+        panic_gate(lambda: backup(timeout), "backup")
+        panic_gate(lambda: tech_support(timeout), "tech support")
+        panic_gate(lambda: upgrade_apics(timeout), "APIC upgrade")
         for group in client.args["firmware_groups"]:
             panic_gate(
-                lambda: upgrade_switches(group, client, timeout),
+                lambda: upgrade_switches(group, timeout),
                 f"{group} switch upgrade",
             )
     except GatingEvent as e:

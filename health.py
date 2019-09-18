@@ -308,11 +308,10 @@ def check_ntp_state(client: Client) -> State:
     return State.OK
 
 
-def run(client=None, timeout=3600) -> State:
+def run(timeout=3600) -> State:
+    client = login_loop_for(timeout, config)
     if client is None:
-        client = login_loop_for(timeout, config)
-        if client is None:
-            return State.FAIL
+        return State.FAIL
     state = loop_for(
         timeout,
         client,

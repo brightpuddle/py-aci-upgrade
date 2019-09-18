@@ -18,9 +18,9 @@ def main() -> State:
     try:
         # Pre change checks
         cli_header("Pre-change snapshot")
-        panic_gate(lambda: pre_post.init(client, timeout=120), "pre/post check")
+        panic_gate(lambda: pre_post.init(timeout=120), "pre/post check")
         cli_header("Pre-change health check")
-        panic_gate(lambda: health.run(client, timeout=120), "health check")
+        panic_gate(lambda: health.run(timeout=120), "health check")
 
         # Pre upgrade prep
         cli_header("Configuration backup")
@@ -32,9 +32,9 @@ def main() -> State:
         cli_header("APIC upgrade")
         panic_gate(lambda: upgrade.upgrade_apics(client, 3600), "APIC upgrade")
         cli_header("APIC post-upgrade comparison checks")
-        panic_gate(lambda: pre_post.run(client, timeout=3600), "pre/post check")
+        panic_gate(lambda: pre_post.run(timeout=3600), "pre/post check")
         cli_header("APIC post-upgrade health checks")
-        panic_gate(lambda: health.run(client, timeout=600), "health check")
+        panic_gate(lambda: health.run(timeout=600), "health check")
 
         # Switch upgrades
         for group in client.args["firmware_groups"]:
