@@ -10,7 +10,8 @@ def cli_header(msg) -> None:
 
 def main() -> State:
     """Initial entry point."""
-    # Initialize API client
+    # This is just to make sure APIC access is functional and credentials work
+    # Actual clients used for the upgrade are initialized as needed
     client = login_loop_for(120, config)
     if client is None:
         return State.FAIL
@@ -24,29 +25,29 @@ def main() -> State:
 
         # Pre upgrade prep
         cli_header("Configuration backup")
-        panic_gate(lambda: upgrade.backup(client, 600), "backup")
+        panic_gate(lambda: upgrade.backup(600), "backup")
         cli_header("Tech support")
-        panic_gate(lambda: upgrade.tech_support(client, 600), "tech support")
+        panic_gate(lambda: upgrade.tech_support(600), "tech support")
 
         # APIC upgrade
         cli_header("APIC upgrade")
-        panic_gate(lambda: upgrade.upgrade_apics(client, 3600), "APIC upgrade")
+        panic_gate(lambda: upgrade.upgrade_apics(3600), "APIC upgrade")
         cli_header("APIC post-upgrade comparison checks")
         panic_gate(lambda: pre_post.run(timeout=3600), "pre/post check")
         cli_header("APIC post-upgrade health checks")
         panic_gate(lambda: health.run(timeout=600), "health check")
 
         # Switch upgrades
-        for group in client.args["firmware_groups"]:
+        for group in config['firmware_groups']:
             cli_header("Switch upgrade")
             panic_gate(
-                lambda: upgrade.upgrade_switches(group, client, 3600),
+                lambda: upgrade.upgrade_switches(group, 3600),
                 f"{group} upgrade",
             )
             cli_header("Switch post-upgrade comparison checks")
-            panic_gate(lambda: pre_post.run(client, timeout=3600), "pre/post check")
+            panic_gate(lambda: pre_post.run(timeout=3600), "pre/post check")
             cli_header("Switch post-upgrade health checks")
-            panic_gate(lambda: health.run(client, timeout=600), "health check")
+            panic_gate(lambda: health.run(timeout=600), "health check")
 
     except GatingEvent as e:
         log.error(f"Failed upgrade on {e}.")

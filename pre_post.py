@@ -169,6 +169,7 @@ def run(timeout=3600) -> State:
     client = login_loop_for(timeout, config)
     if client is None:
         return State.FAIL
+
     snapshot_exists = os.path.isfile(client.args["snapshot_file"])
     snapshot = load_snapshot(client)
 
