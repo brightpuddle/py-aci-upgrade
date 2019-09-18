@@ -118,7 +118,7 @@ class MaintGroup(object):
         for job in get_maint_job(client, self.group):
             log.debug(
                 "Code status",
-                curren_version=job.get("desiredVersion"),
+                current_version=job.get("desiredVersion"),
                 target_version=self.version_str,
                 group=self.group,
             )
