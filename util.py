@@ -175,6 +175,7 @@ class Client(object):
         self.refresh_token()
         res = self.request(relative_url, **kwargs)
         result = get_path(list, res.json(), "imdata")
+        log.debug("Response length for %s" % relative_url, length=len(result))
         if cache:
             self.cache[cache_key] = result
         return result
