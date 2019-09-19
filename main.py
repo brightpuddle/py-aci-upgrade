@@ -38,11 +38,10 @@ def main() -> State:
         panic_gate(lambda: health.run(timeout=600), "health check")
 
         # Switch upgrades
-        for group in config['firmware_groups']:
+        for group in config["firmware_groups"]:
             cli_header("Switch upgrade")
             panic_gate(
-                lambda: upgrade.upgrade_switches(group, 3600),
-                f"{group} upgrade",
+                lambda: upgrade.upgrade_switches(group, 3600), f"{group} upgrade"
             )
             cli_header("Switch post-upgrade comparison checks")
             panic_gate(lambda: pre_post.run(timeout=3600), "pre/post check")

@@ -159,13 +159,13 @@ def compare_routes(client: Client, snapshot: Snapshot) -> State:
     return State.FAIL if has_missing else State.OK
 
 
-def init(client: Client, timeout=3600) -> State:
+def init(timeout: int = 3600) -> State:
     """Always create a new snapshot, for the start of the upgrade"""
-    os.remove(client.args["snapshot_file"])
+    os.remove(config["snapshot_file"])
     return run(timeout=timeout)
 
 
-def run(timeout=3600) -> State:
+def run(timeout: int = 3600) -> State:
     client = login_loop_for(timeout, config)
     if client is None:
         return State.FAIL
@@ -173,7 +173,7 @@ def run(timeout=3600) -> State:
     snapshot_exists = os.path.isfile(client.args["snapshot_file"])
     snapshot = load_snapshot(client)
 
-    def _run_post_checks(client):
+    def _run_post_checks(client: Client) -> State:
         return run_post_checks(client, snapshot)
 
     if snapshot_exists:
