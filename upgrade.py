@@ -1,16 +1,6 @@
 from datetime import datetime
 from typing import Dict, List
-from util import (
-    Client,
-    GatingEvent,
-    State,
-    config,
-    get_path,
-    log,
-    login_loop_for,
-    loop_for,
-    panic_gate,
-)
+from util import Client, State, config, get_path, log, login_loop_for, loop_for
 
 
 def backup(timeout=600) -> State:
@@ -52,7 +42,7 @@ def backup(timeout=600) -> State:
             log.debug(f"status: {last_job_status}")
             return State.PENDING
 
-    state = loop_for(timeout, client, verify_completion)
+    state = loop_for(timeout, verify_completion)
     if state == State.OK:
         log.info("Backup successful.")
     return state
@@ -101,7 +91,7 @@ def tech_support(timeout=600) -> State:
             return State.OK
         return State.PENDING
 
-    state = loop_for(timeout, client, verify_completion)
+    state = loop_for(timeout, verify_completion)
     if state == State.OK:
         log.info("Tech support successful.")
     return state
@@ -255,7 +245,7 @@ def upgrade_apics(timeout=600) -> State:
         log.error(f"APIC upgrade failed", code=res.status_code)
         return State.FAIL
 
-    state = loop_for(3600, client, group.verify_complete)
+    state = loop_for(3600, group.verify_complete)
     if state == State.OK:
         log.info("APIC successfully upgraded.", version=version)
     return state
@@ -296,7 +286,7 @@ def upgrade_switches(fw_group: str, timeout=600) -> State:
         log.error("Failed to trigger upgrade", group=fw_group)
         return State.FAIL
 
-    state = loop_for(3600, client, group.verify_complete)
+    state = loop_for(3600, group.verify_complete)
     if state == State.OK:
         log.info("Switches upgraded successfully.", group=fw_group, version=version)
     return state
@@ -304,17 +294,19 @@ def upgrade_switches(fw_group: str, timeout=600) -> State:
 
 def run(timeout=600) -> State:
     """Initial entry point."""
-    try:
-        panic_gate(lambda: backup(timeout), "backup")
-        panic_gate(lambda: tech_support(timeout), "tech support")
-        panic_gate(lambda: upgrade_apics(timeout), "APIC upgrade")
-        for group in config["firmware_groups"]:
-            panic_gate(
-                lambda: upgrade_switches(group, timeout), f"{group} switch upgrade"
-            )
-    except GatingEvent as e:
-        log.error(f"Failed upgrade on {e}.")
+    if backup(timeout) == State.FAIL:
+        log.error("Failed configuration backup.")
         return State.FAIL
+    if tech_support(timeout) == State.FAIL:
+        log.error("Failed collecting tech support.")
+        return State.FAIL
+    if upgrade_apics(timeout) == State.FAIL:
+        log.error("Failed upgrading APICs.")
+        return State.FAIL
+    for group in config.get("firmware_groups", []):
+        if upgrade_switches(group, timeout) == State.FAIL:
+            log.error(f"Failed switch upgrade for group {group}")
+            return State.FAIL
     return State.OK
 
 

@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime
 from enum import Enum
-from typing import Callable, Union, Dict, List
+from typing import Union, Dict, List
 
 import requests
 from requests.exceptions import ConnectionError, Timeout
@@ -19,6 +19,7 @@ class State(Enum):
     OK = 1
     FAIL = 2
     PENDING = 3
+    NOOP = 4
 
 
 ############################################################
@@ -230,18 +231,6 @@ class Client(object):
 ############################################################
 
 
-class GatingEvent(Exception):
-    pass
-
-
-def panic_gate(fn: Callable[[], State], message: str) -> State:
-    """Workflow gate that panics"""
-    state = workflow_gate(fn())
-    if state == State.FAIL:
-        raise GatingEvent(message)
-    return state
-
-
 def workflow_gate(state: State) -> State:
     if state == state.FAIL:
         log.error("Gating condition: exit, syslog, halt upgrade, etc.")
@@ -249,70 +238,85 @@ def workflow_gate(state: State) -> State:
     return state
 
 
-class LoginLoopTimeout(Exception):
-    pass
-
-
 def login_loop_for(x: int, config) -> Union[Client, None]:
     start_time = time.time()
     login_int = config["login_interval"]
     once = x == -1
-    while time.time() - start_time < x or once:
-        once = False
+    while once or time.time() - start_time < x:
         try:
             client = Client(config)
             return client
-        except Exception:
-            log.debug(f"Login failed. Trying again in {login_int}s...")
+        except KeyboardInterrupt:
+            exit(0)
+        except Exception as e:
+            if once:
+                log.debug(f"Login failed.", error=str(e))
+                return None
+            log.debug(f"Login failed. Trying again in {login_int}s...", error=str(e))
             time.sleep(login_int)
+    return None
 
 
-def loop_for(
-    x,
-    client,
-    fn,
-    wait_msg="In progress. Checking again in {}s...",
-    fail_msg="Action failed. Trying again in {}s...",
-):
+def loop_for(x, fn, wait_msg="In progress", fail_msg="Action failed") -> State:
     """Loop function fn for x seconds, reattempting login
     Returns on success or timeout
     """
     once = x == -1
     start_time = time.time()
     retry_int = config["retry_interval"]
-    while client is not None and (time.time() - start_time < x or once):
-        once = False
+    remaining_time = x
+    while once or time.time() - start_time < x:
+        client = login_loop_for(remaining_time, config)
+        if client is None:
+            continue
         elapsed_time = time.time() - start_time
         remaining_time = x - elapsed_time
+
         try:
             state = fn(client)
             if state == State.OK:
                 return state
+            elif once:
+                log.debug("Action failed.")
+                return State.FAIL
             elif state == State.PENDING:
-                log.debug(wait_msg.format(retry_int))
+                log.debug(f"{wait_msg}. Trying again in {retry_int}s...")
                 time.sleep(retry_int)
-                client = login_loop_for(remaining_time, client.args)
             else:
-                log.info(fail_msg.format(retry_int))
+                log.info(f"{fail_msg}. Trying again in {retry_int}s...")
                 time.sleep(retry_int)
-                client = login_loop_for(remaining_time, client.args)
         except KeyboardInterrupt:
             exit(0)
         except Timeout:
+            if once:
+                log.debug("Connection timeout.")
+                return State.FAIL
             log.debug(f"Connection timeout. Trying again in {retry_int}s...")
             time.sleep(retry_int)
         except ConnectionError:
+            if once:
+                log.debug("Connection error.")
+                return State.FAIL
             log.debug(f"Connection error. Attempting login...")
-            client = login_loop_for(remaining_time, client.args)
+            client = None
         except AuthException:
+            if once:
+                log.debug("Authentication error.")
+                return State.FAIL
             log.debug(f"Authentication error. Attempting login...")
-            client = login_loop_for(remaining_time, client.args)
+            client = None
         except Exception as e:
+            if once:
+                log.debug("Unexpected Error.", error=str(e))
+                return State.FAIL
             log.debug(
                 f"Unexpected Error. Trying login in {retry_int}s...", error=str(e)
             )
             time.sleep(retry_int)
-            client = login_loop_for(remaining_time, client.args)
+            client = None
+        if client is None:
+            client = login_loop_for(remaining_time, config)
+        once = False
     # If we reach here timeout has exceeded and action failed
     log.error("Exceeded retry timeout")
     return State.FAIL

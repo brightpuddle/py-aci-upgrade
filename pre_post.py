@@ -173,16 +173,11 @@ def run(timeout: int = 3600) -> State:
     snapshot_exists = os.path.isfile(client.args["snapshot_file"])
     snapshot = load_snapshot(client)
 
-    def _run_post_checks(client: Client) -> State:
+    def _run_checks(client: Client) -> State:
         return run_post_checks(client, snapshot)
 
     if snapshot_exists:
-        state = loop_for(
-            timeout,
-            client,
-            _run_post_checks,
-            fail_msg="Post-check unsuccessful. Trying again in {}s...",
-        )
+        state = loop_for(timeout, _run_checks, fail_msg="Post-check unsuccessful")
         if state == State.OK:
             log.info("Snapshot compare successful.")
         elif state == State.FAIL:

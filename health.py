@@ -2,16 +2,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Callable
 
-from util import (
-    config,
-    get_node_dn,
-    get_path,
-    log,
-    loop_for,
-    login_loop_for,
-    State,
-    Client,
-)
+from util import get_node_dn, get_path, log, loop_for, State, Client
 
 
 ############################################################
@@ -309,16 +300,7 @@ def check_ntp_state(client: Client) -> State:
 
 
 def run(timeout=3600) -> State:
-    client = login_loop_for(timeout, config)
-    if client is None:
-        return State.FAIL
-
-    state = loop_for(
-        timeout,
-        client,
-        run_checks,
-        fail_msg="Health check unsuccessful. Trying again in {}s...",
-    )
+    state = loop_for(timeout, run_checks, fail_msg="Health check unsuccessful")
     if state == State.OK:
         log.info("Health check successful.")
     elif state == State.FAIL:
