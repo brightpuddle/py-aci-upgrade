@@ -161,7 +161,8 @@ def compare_routes(client: Client, snapshot: Snapshot) -> State:
 
 def init(timeout: int = 3600) -> State:
     """Always create a new snapshot, for the start of the upgrade"""
-    os.remove(config["snapshot_file"])
+    if os.path.isfile(config.get("snapshot_file")):
+        os.remove(config.get("snapshot_file"))
     return run(timeout=timeout)
 
 
