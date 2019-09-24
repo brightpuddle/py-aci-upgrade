@@ -283,7 +283,7 @@ def loop_for(x, fn, wait_msg="In progress", fail_msg="Action failed") -> State:
                 log.debug(f"{wait_msg}. Trying again in {retry_int}s...")
                 time.sleep(retry_int)
             else:
-                log.info(f"{fail_msg}. Trying again in {retry_int}s...")
+                log.debug(f"{fail_msg}. Trying again in {retry_int}s...")
                 time.sleep(retry_int)
         except KeyboardInterrupt:
             exit(0)

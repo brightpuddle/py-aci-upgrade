@@ -3,7 +3,7 @@ from typing import Dict, List
 from util import Client, State, config, get_path, log, login_loop_for, loop_for
 
 
-def backup(timeout=600) -> State:
+def backup(timeout: int = 600) -> State:
     """Run backup job"""
     client = login_loop_for(timeout, config)
     if client is None:
@@ -30,7 +30,7 @@ def backup(timeout=600) -> State:
         return State.FAIL
 
     # Verify completion
-    def verify_completion(client):
+    def verify_completion(client: Client) -> State:
         jobs = client.get(
             f"/api/node/mo/uni/backupst/jobs-[{backup_dn}]",
             params={"query-target": "children", "target-subtree-class": "configJob"},
@@ -48,7 +48,7 @@ def backup(timeout=600) -> State:
     return state
 
 
-def tech_support(timeout=600) -> State:
+def tech_support(timeout: int = 600) -> State:
     """Collect tech support from APICs"""
     client = login_loop_for(timeout, config)
     if client is None:
@@ -75,7 +75,7 @@ def tech_support(timeout=600) -> State:
         log.error("Failed to collect tech support")
         return State.FAIL
 
-    def verify_completion(client):
+    def verify_completion(client: Client) -> State:
         res = client.get(
             f"/api/node/mo/expcont/expstatus-tsexp-{job_name}",
             params={
@@ -106,10 +106,10 @@ def get_maint_job(client: Client, group: str) -> List[Dict[str, str]]:
 
 
 class MaintGroup(object):
-    def __init__(self, client: Client, group: str, version_str: str):
+    def __init__(self, client: Client, group: str, version_str: str) -> None:
         self.group = group
         self.version_str = version_str
-        self.device_count = len(get_maint_job(client, group))
+        self.device_count: int = len(get_maint_job(client, group))
 
     def is_already_upgraded(self, client: Client) -> bool:
         """Is this group already running the target code?"""
@@ -170,7 +170,7 @@ class MaintGroup(object):
         return state
 
 
-def upgrade_apics(timeout=600) -> State:
+def upgrade_apics(timeout: int = 600) -> State:
     """Upgrade controllers."""
     client = login_loop_for(timeout, config)
     if client is None:
@@ -190,7 +190,10 @@ def upgrade_apics(timeout=600) -> State:
         log.error(f"{version} not in firmware repository")
         return State.FAIL
 
-    log.info("Starting controller upgrade.", version=version)
+    log.info(
+        "Starting controller upgrade. View log file for ongoing status.",
+        version=version,
+    )
     now = datetime.strftime(datetime.now(), "%Y-%m-%dT%H:%M:%S.000+00:00")
     res = client.request(
         "/api/node/mo/uni/controller",
@@ -251,7 +254,7 @@ def upgrade_apics(timeout=600) -> State:
     return state
 
 
-def upgrade_switches(fw_group: str, timeout=600) -> State:
+def upgrade_switches(fw_group: str, timeout: int = 600) -> State:
     """Upgrade maintenance group."""
     client = login_loop_for(timeout, config)
     if client is None:
@@ -270,7 +273,11 @@ def upgrade_switches(fw_group: str, timeout=600) -> State:
         log.error("Firmware not in firmware repository.", version=version)
         return State.FAIL
 
-    log.info("Starting upgrade.", group=fw_group, version=version)
+    log.info(
+        "Starting upgrade. View log file for ongoing status.",
+        group=fw_group,
+        version=version,
+    )
     dn = f"uni/fabric/fwpol-{fw_group}"
     res = client.request(
         f"/api/node/mo/{dn}",
@@ -292,7 +299,7 @@ def upgrade_switches(fw_group: str, timeout=600) -> State:
     return state
 
 
-def run(timeout=600) -> State:
+def run(timeout: int = 600) -> State:
     """Initial entry point."""
     if backup(timeout) == State.FAIL:
         log.error("Failed configuration backup.")

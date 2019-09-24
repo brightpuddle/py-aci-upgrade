@@ -304,7 +304,7 @@ def run(timeout=3600) -> State:
     if state == State.OK:
         log.info("Health check successful.")
     elif state == State.FAIL:
-        log.error("Health check failed.")
+        log.debug("Health check failed.")
     return state
 
 

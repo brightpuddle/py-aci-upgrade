@@ -77,10 +77,10 @@ def enable_post(fn: CheckFn) -> CheckFn:
 def run_post_checks(client: Client, snapshot: Snapshot) -> State:
     # Non-zero code indicates an error condition
     for check in enabled_post_checks:
-        log.info(f"Comparing: {check.__doc__}...")
+        log.debug(f"Comparing: {check.__doc__}...")
         state = check(client, snapshot)
         if state == State.FAIL:
-            log.error("Failed on comparison", check=check.__doc__)
+            log.debug("Failed on comparison", check=check.__doc__)
             return state
     return State.OK
 
@@ -99,7 +99,7 @@ def compare_faults(client: Client, snapshot: Snapshot) -> State:
         if new_fault and current_fault.get("severity") != "cleared":
             new_faults.append(current_fault)
     if len(new_faults) > 0:
-        log.warning("%d new faults found" % len(new_faults))
+        log.debug("%d new faults found" % len(new_faults))
         by_code = {}
         for fault in new_faults:
             if fault["severity"] == "critical":
@@ -123,8 +123,11 @@ def compare_faults(client: Client, snapshot: Snapshot) -> State:
                         "description": fault.get("descr", ""),
                     }
         for code, fault_meta in sorted(by_code.items()):
-            log.warning("New fault(s)", **fault_meta)
-        return State.FAIL if has_new_critical_fault else State.OK
+            log.debug("New fault(s)", **fault_meta)
+        if has_new_critical_fault:
+            log.info("New critical faults found. Waiting for fabric to converge...")
+            return State.FAIL
+        return State.OK
     log.debug("No new faults found")
     return State.OK
 
@@ -138,9 +141,14 @@ def compare_devices(client: Client, snapshot: Snapshot) -> State:
         snapshot_dn = device.get("dn", "")
         if snapshot_dn not in current_dns:
             # Device is missing!
-            log.warning("missing device", dn=device.get("dn"), name=device.get("name"))
+            log.debug("missing device", dn=device.get("dn"), name=device.get("name"))
             has_missing = True
-    return State.FAIL if has_missing else State.OK
+    if has_missing:
+        log.info(
+            "Some devices are not currently available. Waiting for fabric to converge..."
+        )
+        return State.FAIL
+    return State.OK
 
 
 @enable_post
@@ -152,11 +160,12 @@ def compare_routes(client: Client, snapshot: Snapshot) -> State:
         dn = route.get("dn", "")
         if dn not in current_dns:
             # Route is missing!
-            log.warning(
-                "missing ISIS route", dn=route.get("dn"), prefix=route.get("pfx")
-            )
+            log.debug("missing ISIS route", dn=route.get("dn"), prefix=route.get("pfx"))
             has_missing = True
-    return State.FAIL if has_missing else State.OK
+    if has_missing:
+        log.info("ISIS inter-pod routes are missing. Waiting for fabric to converge...")
+        return State.FAIL
+    return State.OK
 
 
 def init(timeout: int = 3600) -> State:
@@ -182,7 +191,7 @@ def run(timeout: int = 3600) -> State:
         if state == State.OK:
             log.info("Snapshot compare successful.")
         elif state == State.FAIL:
-            log.error("Snapshot compare failed.")
+            log.debug("Snapshot compare failed.")
         return state
     else:
         return State.OK
